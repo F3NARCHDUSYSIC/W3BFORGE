@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebForge.ai — Prompt Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a2e;
+      --border: #222; --border2: #333; --accent: #6c63ff;
+      --accent-hover: #5a52e0; --text: #e8e8f0; --muted: #888;
+      --faint: #555; --danger: #ff4757; --green: #1aff8a;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 3px; }
+
+    /* HEADER */
+    #header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,10,15,0.88); backdrop-filter: blur(12px);
+      border-bottom: 1px solid #111;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; height: 58px;
+    }
+    .logo { display: flex; align-items: center; gap: 9px; }
+    .logo-icon {
+      width: 28px; height: 28px; border-radius: 7px;
+      background: linear-gradient(135deg, #6c63ff, #ff6b9d);
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .logo-text { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px; }
+    .logo-text span { color: var(--accent); }
+
+    /* STEPS */
+    .steps { display: flex; align-items: center; gap: 6px; }
+    .step-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .step-dot {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; font-family: 'Space Mono', monospace;
+      background: var(--surface2); color: var(--faint); transition: all .3s;
+    }
+    .step-dot.active { background: var(--accent); color: #fff; }
+    .step-dot.done   { background: rgba(26,255,138,.1); border: 1.5px solid var(--green); color: var(--green); }
+    .step-label { font-size: 9px; color: var(--faint); text-transform: uppercase; letter-spacing: .5px; }
+    .step-label.active { color: #a89fff; }
+    .step-line { width: 28px; height: 2px; background: var(--border); margin-bottom: 14px; transition: background .3s; }
+    .step-line.done { background: rgba(108,99,255,.4); }
+
+    /* BUTTONS */
+    .btn {
+      padding: 9px 18px; border-radius: 8px; border: none;
+      cursor: pointer; font-family: inherit; font-weight: 600;
+      font-size: 13px; transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-secondary { background: var(--surface2); color: var(--muted); border: 1px solid var(--border2); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+    .btn-success { background: #1aff8a22; color: var(--green); border: 1.5px solid var(--green); }
+    .btn-danger {
+      background: transparent; color: var(--danger);
+      border: 1px solid rgba(255,71,87,.2); padding: 4px 8px;
+      border-radius: 6px; font-size: 11px; cursor: pointer;
+      font-family: inherit; transition: background .2s;
+    }
+    .btn-danger:hover { background: rgba(255,71,87,.08); }
+    .move-btn {
+      background: var(--surface2); border: 1px solid #2a2a3e;
+      color: var(--muted); width: 22px; height: 22px;
+      border-radius: 4px; cursor: pointer; font-size: 10px;
+      display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .move-btn:hover { background: #252540; color: var(--text); }
+
+    /* APP */
+    #app { height: calc(100vh - 58px); }
+
+    /* STEP 1 */
+    #step1 { display: grid; grid-template-columns: 270px 1fr 255px; height: 100%; }
+    #step1 > * { overflow-y: auto; }
+    .panel-left  { border-right: 1px solid #111; padding: 18px; }
+    .panel-center { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+    .panel-right { border-left: 1px solid #111; padding: 18px; }
+    .panel-title { font-size: 10px; font-family: 'Space Mono', monospace; color: var(--faint); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+
+    .comp-list { display: flex; flex-direction: column; gap: 5px; }
+    .comp-pill {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9px; padding: 9px 12px; cursor: pointer;
+      transition: all .2s; display: flex; align-items: center; gap: 9px;
+    }
+    .comp-pill:hover:not(.added) { background: var(--surface2); border-color: var(--accent); transform: translateX(3px); }
+    .comp-pill.added { opacity: 0.35; cursor: default; pointer-events: none; }
+    .comp-icon  { font-size: 14px; width: 20px; text-align: center; color: var(--accent); flex-shrink: 0; }
+    .comp-info  { flex: 1; min-width: 0; }
+    .comp-name  { font-size: 12px; font-weight: 600; color: #d0d0e0; }
+    .comp-desc  { font-size: 10px; color: var(--faint); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .comp-check { margin-left: auto; font-size: 10px; color: var(--faint); }
+
+    .canvas-header { display: flex; align-items: center; justify-content: space-between; }
+    .canvas-title  { font-size: 16px; font-weight: 700; }
+    .canvas-sub    { font-size: 11px; color: var(--faint); margin-top: 3px; }
+    .badge { padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(108,99,255,.15); color: #a89fff; border: 1px solid rgba(108,99,255,.25); }
+
+    .canvas-empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 2px dashed #1a1a2e; border-radius: 14px;
+      padding: 50px; text-align: center; gap: 10px; min-height: 260px;
+    }
+    .canvas-empty-icon { font-size: 38px; opacity: .25; }
+    .canvas-empty-text { color: var(--faint); font-size: 13px; }
+
+    .canvas-list { display: flex; flex-direction: column; gap: 7px; }
+    .canvas-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 9px; padding: 10px 13px;
+      display: flex; align-items: center; gap: 9px;
+      animation: slideIn .2s ease;
+    }
+    @keyframes slideIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform: translateY(0); } }
+    .canvas-num         { color: var(--faint); font-family: 'Space Mono', monospace; font-size: 10px; width: 18px; flex-shrink: 0; }
+    .canvas-item-icon   { font-size: 14px; color: var(--accent); flex-shrink: 0; }
+    .canvas-item-info   { flex: 1; min-width: 0; }
+    .canvas-item-name   { font-size: 12px; font-weight: 600; }
+    .canvas-item-desc   { font-size: 10px; color: var(--faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .canvas-actions     { display: flex; gap: 4px; align-items: center; }
+    .canvas-footer      { margin-top: auto; padding-top: 12px; }
+    .btn-generate       { width: 100%; padding: 13px; font-size: 14px; }
+
+    .settings-list { display: flex; flex-direction: column; gap: 14px; }
+    label.field-label { font-size: 11px; color: #777; display: block; margin-bottom: 5px; }
+    .input-field {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px; padding: 9px 12px;
+      color: var(--text); font-family: inherit; font-size: 13px;
+      width: 100%; outline: none; transition: border-color .2s;
+    }
+    .input-field:focus { border-color: var(--accent); }
+    textarea.input-field { resize: vertical; }
+
+    .style-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .style-chip {
+      padding: 6px 12px; border-radius: 20px;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer; font-size: 12px;
+      font-family: inherit; transition: all .2s;
+    }
+    .style-chip.selected { border-color: var(--accent); background: rgba(108,99,255,.15); color: #a89fff; }
+    .style-chip:hover:not(.selected) { border-color: #333; color: var(--text); }
+
+    /* STEP 2 */
+    #step2 { display: none; max-width: 760px; margin: 0 auto; padding: 32px 20px; }
+    .step-heading { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .step-sub     { font-size: 12px; color: var(--faint); margin-bottom: 16px; }
+
+    /* PROMPT DISPLAY BOX */
+    .prompt-box {
+      background: #070710; border: 1px solid #1a1a2e; border-radius: 12px;
+      padding: 18px; font-family: 'Space Mono', monospace; font-size: 11.5px;
+      line-height: 1.8; color: #c0c0d8; max-height: 420px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-word;
+      user-select: all;
+    }
+
+    /* COPY AREA */
+    .copy-section {
+      margin-top: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 18px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .copy-info { flex: 1; }
+    .copy-info-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .copy-info-sub   { font-size: 11px; color: var(--faint); }
+    .copy-sites { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .site-badge {
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      background: var(--surface2); color: var(--muted); border: 1px solid var(--border2);
+    }
+
+    .step2-actions { display: flex; gap: 10px; margin-top: 14px; }
+
+    /* TOAST */
+    #toast {
+      position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(60px);
+      background: var(--green); color: #000; padding: 10px 22px;
+      border-radius: 30px; font-weight: 700; font-size: 13px;
+      opacity: 0; transition: all .3s; pointer-events: none; z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* CHAR COUNT */
+    .char-count { font-size: 10px; color: var(--faint); text-align: right; margin-top: 6px; font-family: 'Space Mono', monospace; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">WebForge<span>.ai</span></div>
+  </div>
+  <div class="steps">
+    <div class="step-wrap">
+      <div class="step-dot active" id="dot1">1</div>
+      <div class="step-label active" id="lbl1">Build</div>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-wrap">
+      <div class="step-dot" id="dot2">2</div>
+      <div class="step-label" id="lbl2">Prompt</div>
+    </div>
+  </div>
+  <button class="btn btn-secondary btn-sm" onclick="resetAll()">↺ Reset</button>
+</div>
+
+<div id="app">
+
+  <!-- ══ STEP 1: BUILD ══ -->
+  <div id="step1">
+
+    <!-- Left: komponen -->
+    <div class="panel-left">
+      <div class="panel-title">Komponen</div>
+      <div class="comp-list" id="compList"></div>
+    </div>
+
+    <!-- Center: canvas -->
+    <div class="panel-center">
+      <div class="canvas-header">
+        <div>
+          <div class="canvas-title">Canvas</div>
+          <div class="canvas-sub">Klik komponen di kiri, atur urutan di sini</div>
+        </div>
+        <span class="badge" id="canvasBadge">0 komponen</span>
+      </div>
+
+      <div id="canvasEmpty" class="canvas-empty">
+        <div class="canvas-empty-icon">⊞</div>
+        <div class="canvas-empty-text">Pilih komponen dari panel kiri untuk memulai</div>
+      </div>
+      <div class="canvas-list" id="canvasList" style="display:none;"></div>
+
+      <div class="canvas-footer" id="canvasFooter" style="display:none;">
+        <button class="btn btn-primary btn-generate" onclick="goToStep2()">Generate Prompt →</button>
+      </div>
+    </div>
+
+    <!-- Right: settings -->
+    <div class="panel-right">
+      <div class="panel-title">Pengaturan</div>
+      <div class="settings-list">
+        <div>
+          <label class="field-label">Nama Brand / Website</label>
+          <input class="input-field" id="brandName" placeholder="contoh: TechStartup" />
+        </div>
+        <div>
+          <label class="field-label">Deskripsi Singkat</label>
+          <textarea class="input-field" id="brandDesc" rows="3" placeholder="contoh: Platform SaaS untuk manajemen proyek tim"></textarea>
+        </div>
+        <div>
+          <label class="field-label">Gaya Desain</label>
+          <div class="style-chips" id="styleChips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STEP 2: PROMPT ══ -->
+  <div id="step2">
+    <div class="step-heading">Prompt Siap! ✓</div>
+    <div class="step-sub">Copy prompt di bawah, lalu paste ke AI manapun (Claude, ChatGPT, Gemini, dll).</div>
+
+    <div class="prompt-box" id="promptBox"></div>
+    <div class="char-count" id="charCount"></div>
+
+    <!-- Copy card -->
+    <div class="copy-section">
+      <div class="copy-info">
+        <div class="copy-info-title">Paste prompt ini ke AI favoritmu</div>
+        <div class="copy-info-sub">Salin lalu buka salah satu platform di bawah</div>
+        <div class="copy-sites">
+          <a href="https://claude.ai" target="_blank" class="site-badge">Claude.ai</a>
+          <a href="https://chat.openai.com" target="_blank" class="site-badge">ChatGPT</a>
+          <a href="https://gemini.google.com" target="_blank" class="site-badge">Gemini</a>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btnCopy" onclick="copyPrompt()" style="flex-shrink:0;padding:12px 20px;font-size:14px;">
+        📋 Copy Prompt
+      </button>
+    </div>
+
+    <div class="step2-actions">
+      <button class="btn btn-secondary" onclick="goToStep(1)">← Kembali Edit</button>
+      <button class="btn btn-secondary" onclick="resetAll()">↺ Mulai Baru</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast">✓ Prompt disalin!</div>
+
+<script>
+const COMPONENTS = [
+  { id:"navbar",       label:"Navbar",         icon:"▬", desc:"Navigation bar dengan logo & menu links" },
+  { id:"hero",         label:"Hero / Banner",   icon:"◼", desc:"Section hero besar dengan headline & CTA button" },
+  { id:"features",    label:"Features",        icon:"⊞", desc:"Grid fitur / keunggulan produk (3 kolom)" },
+  { id:"about",       label:"About",           icon:"◎", desc:"Section tentang perusahaan / profil" },
+  { id:"gallery",     label:"Gallery",         icon:"⊟", desc:"Grid foto / portofolio" },
+  { id:"testimonial", label:"Testimonial",     icon:"❝", desc:"Ulasan / quote dari pelanggan" },
+  { id:"pricing",     label:"Pricing",         icon:"◈", desc:"Tabel paket harga (3 tier)" },
+  { id:"contact",     label:"Contact Form",    icon:"✉", desc:"Form kontak dengan input nama, email, pesan" },
+  { id:"cta",         label:"CTA Banner",      icon:"◆", desc:"Banner call-to-action dengan tombol besar" },
+  { id:"footer",      label:"Footer",          icon:"▬", desc:"Footer dengan link & copyright" },
+];
+
+const STYLES = [
+  { id:"modern",  label:"Modern & Clean" },
+  { id:"bold",    label:"Bold & Colorful" },
+  { id:"minimal", label:"Minimalist" },
+  { id:"dark",    label:"Dark Mode" },
+  { id:"elegant", label:"Elegant / Luxury" },
+];
+
+const STYLE_MAP = {
+  modern:  "modern, clean, professional dengan warna biru dan putih",
+  bold:    "bold, colorful, energik dengan warna-warna cerah dan kontras tinggi",
+  minimal: "sangat minimalis, banyak whitespace, tipografi dominan, warna netral",
+  dark:    "dark mode elegan dengan background gelap dan aksen neon atau emas",
+  elegant: "mewah dan elegan, serif fonts, warna emas/hitam/krem",
+};
+
+let canvas = [];
+let selectedStyle = "modern";
+let currentPrompt = "";
+
+/* INIT */
+function init() {
+  renderStyleChips();
+  renderCompList();
+}
+
+/* STYLE */
+function renderStyleChips() {
+  document.getElementById("styleChips").innerHTML = STYLES.map(s =>
+    `<button class="style-chip ${s.id===selectedStyle?'selected':''}" onclick="selectStyle('${s.id}')">${s.label}</button>`
+  ).join("");
+}
+function selectStyle(id) { selectedStyle = id; renderStyleChips(); }
+
+/* COMP LIST */
+function renderCompList() {
+  document.getElementById("compList").innerHTML = COMPONENTS.map(c => {
+    const added = canvas.some(x => x.id === c.id);
+    return `<div class="comp-pill ${added?'added':''}" onclick="addComp('${c.id}')">
+      <span class="comp-icon">${c.icon}</span>
+      <div class="comp-info">
+        <div class="comp-name">${c.label}</div>
+        <div class="comp-desc">${c.desc}</div>
+      </div>
+      ${added ? '<span class="comp-check">✓</span>' : ''}
+    </div>`;
+  }).join("");
+}
+
+/* CANVAS */
+function addComp(id) {
+  if (canvas.some(c => c.id === id)) return;
+  canvas.push({ ...COMPONENTS.find(c => c.id === id), uid: Date.now() + Math.random() });
+  renderCanvas(); renderCompList();
+}
+function removeComp(uid) {
+  canvas = canvas.filter(c => c.uid !== uid);
+  renderCanvas(); renderCompList();
+}
+function moveUp(idx) {
+  if (idx === 0) return;
+  [canvas[idx-1], canvas[idx]] = [canvas[idx], canvas[idx-1]];
+  renderCanvas();
+}
+function moveDown(idx) {
+  if (idx === canvas.length-1) return;
+  [canvas[idx], canvas[idx+1]] = [canvas[idx+1], canvas[idx]];
+  renderCanvas();
+}
+function renderCanvas() {
+  const empty  = document.getElementById("canvasEmpty");
+  const list   = document.getElementById("canvasList");
+  const footer = document.getElementById("canvasFooter");
+  document.getElementById("canvasBadge").textContent = canvas.length + " komponen";
+  if (canvas.length === 0) {
+    empty.style.display = "flex"; list.style.display = "none"; footer.style.display = "none"; return;
+  }
+  empty.style.display = "none"; list.style.display = "flex"; footer.style.display = "block";
+  list.innerHTML = canvas.map((c, i) =>
+    `<div class="canvas-item">
+      <span class="canvas-num">${i+1}</span>
+      <span class="canvas-item-icon">${c.icon}</span>
+      <div class="canvas-item-info">
+        <div class="canvas-item-name">${c.label}</div>
+        <div class="canvas-item-desc">${c.desc}</div>
+      </div>
+      <div class="canvas-actions">
+        <button class="move-btn" onclick="moveUp(${i})">↑</button>
+        <button class="move-btn" onclick="moveDown(${i})">↓</button>
+        <button class="btn-danger" onclick="removeComp(${c.uid})">✕</button>
+      </div>
+    </div>`
+  ).join("");
+}
+
+/* STEPS */
+function goToStep(n) {
+  document.getElementById("step1").style.display = n===1 ? "grid" : "none";
+  document.getElementById("step2").style.display = n===2 ? "block" : "none";
+  // dots
+  const dot1 = document.getElementById("dot1"), dot2 = document.getElementById("dot2");
+  const lbl1 = document.getElementById("lbl1"), lbl2 = document.getElementById("lbl2");
+  const line1 = document.getElementById("line1");
+  if (n === 1) {
+    dot1.className="step-dot active"; dot1.textContent="1"; lbl1.className="step-label active";
+    dot2.className="step-dot";        dot2.textContent="2"; lbl2.className="step-label";
+    line1.className="step-line";
+  } else {
+    dot1.className="step-dot done";  dot1.textContent="✓"; lbl1.className="step-label";
+    dot2.className="step-dot active"; dot2.textContent="2"; lbl2.className="step-label active";
+    line1.className="step-line done";
+  }
+}
+
+function goToStep2() {
+  if (canvas.length === 0) return;
+  const brand = document.getElementById("brandName").value.trim() || "MyBrand";
+  const desc  = document.getElementById("brandDesc").value.trim() || "Website profesional untuk bisnis";
+  currentPrompt = buildPrompt(brand, desc);
+  document.getElementById("promptBox").textContent = currentPrompt;
+  document.getElementById("charCount").textContent = currentPrompt.length.toLocaleString() + " karakter";
+  goToStep(2);
+  // reset copy button
+  document.getElementById("btnCopy").textContent = "📋 Copy Prompt";
+  document.getElementById("btnCopy").className = "btn btn-primary";
+}
+
+/* PROMPT */
+function buildPrompt(brand, desc) {
+  const comps = canvas.map(c => `- ${c.label}: ${c.desc}`).join("\n");
+  return `Buatkan kode HTML lengkap satu halaman (single page website) dengan kriteria berikut:
+
+Nama Brand / Website: ${brand}
+Deskripsi: ${desc}
+Gaya Desain: ${STYLE_MAP[selectedStyle]}
+
+Komponen yang harus ada (sesuai urutan):
+${comps}
+
+Persyaratan teknis:
+- Gunakan HTML5, CSS3 (internal <style>), dan vanilla JavaScript minimal
+- Fully responsive (mobile-friendly) dengan media queries
+- Smooth scroll antar section
+- Warna, font, dan spacing harus konsisten dengan gaya desain yang dipilih
+- Gunakan Google Fonts yang sesuai
+- Kode harus bersih, terstruktur, dan siap pakai
+- Berikan placeholder text yang relevan dengan nama brand
+
+Hanya berikan kode HTML lengkap, tanpa penjelasan tambahan.`;
+}
+
+/* COPY */
+function copyPrompt() {
+  if (!currentPrompt) return;
+  navigator.clipboard.writeText(currentPrompt).then(() => {
+    const btn = document.getElementById("btnCopy");
+    btn.textContent = "✓ Tersalin!";
+    btn.className = "btn btn-success";
+    const t = document.getElementById("toast");
+    t.classList.add("show");
+    setTimeout(() => {
+      t.classList.remove("show");
+      btn.textContent = "📋 Copy Prompt";
+      btn.className = "btn btn-primary";
+    }, 2400);
+  });
+}
+
+function resetAll() {
+  canvas = []; selectedStyle = "modern"; currentPrompt = "";
+  document.getElementById("brandName").value = "";
+  document.getElementById("brandDesc").value = "";
+  renderCanvas(); renderCompList(); renderStyleChips();
+  goToStep(1);
+}
+
+init();
+</script>
+</body>
+</html>
